@@ -22,15 +22,19 @@ static void destroy() {
 	delete[] population;
 }
 
+static void print_pop(std::ostream& out) {
+	for(size_t i = 0; i < pop_size; i++) {
+		for(size_t j = 0; j < member_size; j++) {
+			out << (unsigned int)population[i*member_size + j] << " ";
+		}
+		out << std::endl;
+	}
+}
+
 void run_genetic(size_t p_size, size_t m_size) {
 	pop_size = p_size;
 	member_size = m_size;
 	init();
-	for(size_t i = 0; i < pop_size; i++) {
-		for(size_t j = 0; j < member_size; j++) {
-			std::cout << (unsigned int)population[i*member_size + j] << " ";
-		}
-		std::cout << std::endl;
-	}
+	print_pop(std::cout);
 	destroy();
 }

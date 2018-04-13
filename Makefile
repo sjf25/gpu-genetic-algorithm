@@ -1,5 +1,5 @@
 CXX = g++-4.9
-CXXFLAGS = -std=c++14
+CXXFLAGS = -std=c++14 -W -Wall
 TARGET = bin/project
 SRC_FILES = $(wildcard src/*.cpp)
 OBJ_FILES = $(patsubst src/%.cpp, obj/%.o, $(SRC_FILES))

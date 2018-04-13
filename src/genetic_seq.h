@@ -3,6 +3,6 @@
 
 #include <cstddef>
 
-void run_genetic(size_t, size_t);
+void run_genetic(size_t, size_t, double, double);
 
 #endif

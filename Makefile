@@ -4,13 +4,16 @@ TARGET = bin/project
 SRC_FILES = $(wildcard src/*.cpp)
 OBJ_FILES = $(patsubst src/%.cpp, obj/%.o, $(SRC_FILES))
 
-.PHONY: all clean
+.PHONY: all clean run
 
 all: $(TARGET)
 
 clean:
 	rm -f bin/*
 	rm -f obj/*
+
+run: $(TARGET)
+	$(TARGET)
 
 obj/%.o: src/%.cpp
 	@mkdir -p obj

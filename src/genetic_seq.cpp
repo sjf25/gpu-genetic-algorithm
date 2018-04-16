@@ -8,7 +8,6 @@
 size_t pop_size, member_size;
 uint8_t* population;
 std::default_random_engine rand_gen;
-unsigned survivor_count;
 double crossover_rate;
 double mutation_rate;
 double (*fitness)(uint8_t*);
@@ -194,7 +193,7 @@ void print_pop(std::ostream& out, uint8_t* member_arr=population) {
 	}
 }
 
-void run_genetic(size_t p_size, size_t m_size, double cr_rate,
+void run_genetic_seq(size_t p_size, size_t m_size, double cr_rate,
 		double m_rate, unsigned max_iter, double (*fitness_func)(uint8_t*)) {
 	// population size must be even
 	assert(p_size % 2 == 0);
@@ -204,7 +203,6 @@ void run_genetic(size_t p_size, size_t m_size, double cr_rate,
 	crossover_rate = cr_rate;
 	mutation_rate = m_rate;
 	fitness = fitness_func;
-	//survivor_count = sur_count;
 
 	init();
 	//print_pop(std::cout);

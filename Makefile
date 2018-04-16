@@ -14,7 +14,7 @@ clean:
 	rm -f obj/*
 
 run: $(TARGET)
-	$(TARGET) --input=data/rand100_01_alt ; notify-send "Done Running" -t 3000
+	$(TARGET) --input=$(INPUT) ; notify-send "Done Running" -t 3000
 
 obj/%.o: src/%.cpp
 	@mkdir -p obj

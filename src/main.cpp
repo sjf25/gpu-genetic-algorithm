@@ -56,45 +56,10 @@ double vertex_cover_fitness(uint8_t* member) {
 }
 
 
-#if 0
-unsigned greedy_vertex_cover() {
-	unsigned cover_size = 0;
-	//std::unordered_set<std::pair<unsigned, unsigned>> e_prime;
-	std::stack<unsigned> e_prime;
-	uint8_t* adj_cpy = new uint8_t[num_vertices * num_vertices];
-	memcpy(adj_cpy, adjacency, num_vertices * num_vertices);
-	for(unsigned i = 0; i < num_vertices; i++) {
-		for(unsigned j = i; j < num_vertices; j++) {
-			if(adjacency[i * num_vertices + j] == 1)
-				//e_prime.push_back(std::pair(i, j));
-				e_prime.push(i*num_vertices + j);
-		}
-	}
-	while(e_prime.size() > 0) {
-		unsigned edge = e_prime.top();
-		e_prime.pop();
-		unsigned u = edge / num_vertices;
-		unsigned v = edge % num_vertices;
-		assert(u < num_vertices && v < num_vertices);
-		assert(u <= v);
-		if(adj_cpy[u*num_vertices + v] == 0)
-			continue;
-		cover_size+=2;
-		for(unsigned i = 0; i < num_vertices; i++) {
-			adj_cpy[u * num_vertices + i] = 0;
-			adj_cpy[i * num_vertices + v] = 0;
-			adj_cpy[v * num_vertices + i] = 0;
-			adj_cpy[i * num_vertices + u] = 0;
-		}
-	}
-	return cover_size;
-}
-#endif
-
 // used to test if genetic algorithm is worth-while
 // algorithm obainted from khuri-back paper and geeksforgeeks
 // TODO: randomly select edge
-#if 0
+#if 1
 unsigned greedy_vertex_cover() {
 	bool* visited = new bool[num_vertices]();
 	
@@ -124,6 +89,7 @@ unsigned greedy_vertex_cover() {
 #endif
 
 // TODO: consider if this works with self pointing edges
+#if 0
 unsigned greedy_vertex_cover() {
 	bool* visited = new bool[num_vertices]();
 	std::vector<unsigned> to_visit;
@@ -165,12 +131,13 @@ unsigned greedy_vertex_cover() {
 	//return cover_size;
 	return cover_size;
 }
+#endif
 
 int main(int argc, char**argv) {
 	handle_args(argc, argv);
 	load_vertex_cover(input_file);
 	std::cout << "greedy solution is " << greedy_vertex_cover() << std::endl;
-	/*run_genetic(50, num_vertices, 0.6, 1/(double)num_vertices, 20'000,
-			&vertex_cover_fitness);*/
+	run_genetic_seq(50, num_vertices, 0.6, 1/(double)num_vertices, 20'000,
+			&vertex_cover_fitness);
 	delete[] adjacency;
 }

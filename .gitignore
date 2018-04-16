@@ -33,3 +33,6 @@
 
 bin/
 obj/
+
+# ignore swap files
+*.swp

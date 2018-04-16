@@ -1,5 +1,6 @@
 CXX = g++-4.9
-CXXFLAGS = -std=c++14 -W -Wall
+CXXFLAGS = -std=c++14 -W -Wall -O3
+LFLAGS = -lboost_program_options
 TARGET = bin/project
 SRC_FILES = $(wildcard src/*.cpp)
 OBJ_FILES = $(patsubst src/%.cpp, obj/%.o, $(SRC_FILES))
@@ -13,7 +14,7 @@ clean:
 	rm -f obj/*
 
 run: $(TARGET)
-	$(TARGET)
+	$(TARGET) --input=data/rand100_01_alt ; notify-send "Done Running" -t 3000
 
 obj/%.o: src/%.cpp
 	@mkdir -p obj
@@ -21,4 +22,4 @@ obj/%.o: src/%.cpp
 
 $(TARGET): $(OBJ_FILES)
 	@mkdir -p bin
-	$(CXX) -o $@ $^ $(CXXFLAGS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LFLAGS)

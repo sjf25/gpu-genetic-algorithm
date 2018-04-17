@@ -1,3 +1,5 @@
+#TODO: get the makefile to recompile when header changes
+
 CXX = g++-4.9
 CXXFLAGS = -std=c++14 -W -Wall -O3
 LFLAGS = -lboost_program_options

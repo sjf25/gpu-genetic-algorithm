@@ -5,12 +5,12 @@
 #include <cstring>
 #include <cassert>
 
-size_t pop_size, member_size;
-uint8_t* population;
-std::default_random_engine rand_gen;
-double crossover_rate;
-double mutation_rate;
-double (*fitness)(uint8_t*);
+static size_t pop_size, member_size;
+static uint8_t* population;
+static std::default_random_engine rand_gen;
+static double crossover_rate;
+static double mutation_rate;
+static double (*fitness)(uint8_t*);
 
 //double best_fitness = std::numeric_limits<double>::max();
 double best_fitness = std::numeric_limits<double>::min();
@@ -31,7 +31,7 @@ void init() {
 	//memset(population, 1, member_size);
 }
 
-uint8_t* get_member(uint8_t* member_array, int i) {
+static uint8_t* get_member(uint8_t* member_array, int i) {
 	return &member_array[i * member_size];
 }
 

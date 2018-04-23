@@ -3,6 +3,7 @@
 
 #include <boost/program_options.hpp>
 #include <string>
+#include <iostream>
 
 extern std::string input_file;
 

@@ -1,31 +1,40 @@
-#include "genetic_seq.h"
-#include <cassert>
+#include "vertex_cover.h"
 #include <iostream>
 #include <fstream>
-#include <cstring>
-#include <stack>
-#include "args_parser.h"
+#include <cassert>
 
-#include <vector>
-
-std::string input_file;
-
-unsigned num_vertices = 10;
+static unsigned num_vertices;
 // TODO: consider using bitarray-type structure
 // TODO: consider using triangular structure
-uint8_t* adjacency;
+static uint8_t* adjacency;
 
-double fitness(uint8_t*) {
-	return 42;
-}
+__device__ static unsigned d_num_vertices;
+__device__ static uint8_t* d_adjacency;
 
 // Note: graph is undirected in vertex cover problem
-void load_vertex_cover(std::string filename) {
+unsigned load_graph(std::string filename) {
 	std::ifstream graph_file(filename);
 	std::string p, edge;
 	unsigned num_edges;
 	graph_file >> p >> edge >> num_vertices >> num_edges;
+	cudaMemcpyToSymbol(d_num_vertices, &num_vertices, sizeof(unsigned));
+	cudaDeviceSynchronize();
+	cudaError err2 = cudaGetLastError();
+	if(err2 != cudaSuccess) {
+		std::cerr << "error when memcpying to d_num_vertices\n";
+		exit(1);
+	}
+
+
+
 	adjacency = new uint8_t[num_vertices * num_vertices]();
+	uint8_t* adj_temp;
+	cudaError err1 = cudaMalloc(&adj_temp, num_vertices * num_vertices);
+	if(err1 != cudaSuccess) {
+		std::cerr << "error when cudaMalloc-ing temporary adjacency arr\n";
+		exit(1);
+	}
+
 	for(unsigned i = 0; i < num_edges; i++) {
 		std::string dummy;
 		unsigned u, v;
@@ -33,6 +42,21 @@ void load_vertex_cover(std::string filename) {
 		adjacency[u * num_vertices + v] = 1;
 		adjacency[v * num_vertices + u] = 1;
 	}
+
+	cudaMemcpy(adj_temp, adjacency, num_vertices * num_vertices, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(d_adjacency, &adj_temp, sizeof(uint8_t*));
+	cudaError err3 = cudaGetLastError();
+	cudaDeviceSynchronize();
+	if(err3 != cudaSuccess) {
+		std::cerr << "error copying adjacency matrix to cuda\n";
+		exit(1);
+	}
+
+	return num_vertices;
+}
+
+void destroy_graph() {
+	delete[] adjacency;
 }
 
 double vertex_cover_fitness(uint8_t* member) {
@@ -55,6 +79,29 @@ double vertex_cover_fitness(uint8_t* member) {
 	return 1/total;
 }
 
+__device__ double d_vertex_cover_fitness(uint8_t* member) {
+	return 42.0;
+	printf("from device, |V| = %d\n", d_num_vertices);
+	double total = 0.0;
+	for(unsigned i = 0; i < d_num_vertices; i++) {
+		assert(member[i] == 0 || member[i] == 1);
+		if(member[i] == 1)
+			total += 1.0;
+		// else member[i] == 0
+		else {
+			double penalty = 0.0;
+			for(unsigned j = 0; j < d_num_vertices; j++) {
+				/*if(member[j] == 0 && adjacency[i*num_vertices + j] == 1)
+					penalty += 1.0;*/
+				penalty += d_adjacency[i*d_num_vertices + j] * (1-member[j]);
+			}
+			total += d_num_vertices * penalty;
+		}
+	}
+	return 1/total;
+}
+
+//extern __device__ double (*dummy)(uint8_t*) = d_vertex_cover_fitness;
 
 // used to test if genetic algorithm is worth-while
 // algorithm obainted from khuri-back paper and geeksforgeeks
@@ -132,12 +179,3 @@ unsigned greedy_vertex_cover() {
 	return cover_size;
 }
 #endif
-
-int main(int argc, char**argv) {
-	handle_args(argc, argv);
-	load_vertex_cover(input_file);
-	std::cout << "greedy solution is " << greedy_vertex_cover() << std::endl;
-	run_genetic_seq(50, num_vertices, 0.6, 1/(double)num_vertices, 20'000,
-			&vertex_cover_fitness);
-	delete[] adjacency;
-}

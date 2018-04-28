@@ -8,8 +8,8 @@ static unsigned num_vertices;
 // TODO: consider using triangular structure
 static uint8_t* adjacency;
 
-__device__ static unsigned d_num_vertices;
-__device__ static uint8_t* d_adjacency;
+__constant__ static unsigned d_num_vertices;
+__constant__ static uint8_t* d_adjacency;
 
 // Note: graph is undirected in vertex cover problem
 unsigned load_graph(std::string filename) {
@@ -80,10 +80,14 @@ double vertex_cover_fitness(uint8_t* member) {
 }
 
 __device__ double d_vertex_cover_fitness(uint8_t* member) {
-	return 42.0;
-	printf("from device, |V| = %d\n", d_num_vertices);
+	//printf("from device, |V| = %d\n", d_num_vertices);
 	double total = 0.0;
 	for(unsigned i = 0; i < d_num_vertices; i++) {
+		#if 1
+		if(member[i] != 0 && member[i] != 1) {
+			printf("member: %d\n", member[i]);
+		}
+		#endif
 		assert(member[i] == 0 || member[i] == 1);
 		if(member[i] == 1)
 			total += 1.0;

@@ -54,7 +54,7 @@ double* pop_fitnesses() {
 // returns index of member of population selected via roulette wheel selection
 // TODO: problem is this only works when maxing fitness not minimizing
 #if 1
-unsigned roulette(double* fitness_arr, double fitness_sum) {
+static unsigned roulette(double* fitness_arr, double fitness_sum) {
 	// TODO: consider making distribution static
 	std::uniform_real_distribution<double> dist(0.0, fitness_sum);
 	double random_num = dist(rand_gen);
@@ -133,7 +133,7 @@ uint8_t* selection() {
 	return new_population;
 }
 
-void two_point_crossover(uint8_t* parent1, uint8_t* parent2) {
+void static two_point_crossover(uint8_t* parent1, uint8_t* parent2) {
 	// crossover only with probability of crossover rate
 	std::uniform_real_distribution<double> crossover_dist(0, 1);
 	double crossover_random = crossover_dist(rand_gen);
@@ -159,7 +159,7 @@ void two_point_crossover(uint8_t* parent1, uint8_t* parent2) {
 }
 
 // uses two-point crossover
-void crossover(uint8_t* selected) {
+void static crossover(uint8_t* selected) {
 	for(unsigned i = 0; i < pop_size; i+=2) {
 		// TODO: remove print statement
 		//std::cout << "in crossover, i = " << i << std::endl;
@@ -168,7 +168,7 @@ void crossover(uint8_t* selected) {
 	}
 }
 
-void mutation(uint8_t* crossed_over) {
+void static mutation(uint8_t* crossed_over) {
 	std::uniform_real_distribution<double> mutation_dist(0.0, 1.0);
 	for(unsigned i = 0; i < pop_size * member_size; i++) {
 		double mutation_prob = mutation_dist(rand_gen);
@@ -180,14 +180,14 @@ void mutation(uint8_t* crossed_over) {
 	}
 }
 
-void print_member(std::ostream& out, uint8_t* member) {
+static void print_member(std::ostream& out, uint8_t* member) {
 	for(size_t j = 0; j < member_size; j++) {
 		out << (unsigned int)member[j] << " ";
 	}
 	out << std::endl;
 }
 
-void print_pop(std::ostream& out, uint8_t* member_arr=population) {
+static void print_pop(std::ostream& out, uint8_t* member_arr=population) {
 	for(size_t i = 0; i < pop_size; i++) {
 		print_member(out, &member_arr[i*member_size]);
 	}

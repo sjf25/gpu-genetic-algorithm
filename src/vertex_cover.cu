@@ -69,8 +69,6 @@ double vertex_cover_fitness(uint8_t* member) {
 		else {
 			double penalty = 0.0;
 			for(unsigned j = 0; j < num_vertices; j++) {
-				/*if(member[j] == 0 && adjacency[i*num_vertices + j] == 1)
-					penalty += 1.0;*/
 				penalty += adjacency[i*num_vertices + j] * (1-member[j]);
 			}
 			total += num_vertices * penalty;
@@ -80,7 +78,6 @@ double vertex_cover_fitness(uint8_t* member) {
 }
 
 __device__ double d_vertex_cover_fitness(uint8_t* member) {
-	//printf("from device, |V| = %d\n", d_num_vertices);
 	double total = 0.0;
 	for(unsigned i = 0; i < d_num_vertices; i++) {
 		#if 1
@@ -95,8 +92,6 @@ __device__ double d_vertex_cover_fitness(uint8_t* member) {
 		else {
 			double penalty = 0.0;
 			for(unsigned j = 0; j < d_num_vertices; j++) {
-				/*if(member[j] == 0 && adjacency[i*num_vertices + j] == 1)
-					penalty += 1.0;*/
 				penalty += d_adjacency[i*d_num_vertices + j] * (1-member[j]);
 			}
 			total += d_num_vertices * penalty;
@@ -105,12 +100,9 @@ __device__ double d_vertex_cover_fitness(uint8_t* member) {
 	return 1/total;
 }
 
-//extern __device__ double (*dummy)(uint8_t*) = d_vertex_cover_fitness;
-
 // used to test if genetic algorithm is worth-while
 // algorithm obainted from khuri-back paper and geeksforgeeks
 // TODO: randomly select edge
-#if 1
 unsigned greedy_vertex_cover() {
 	bool* visited = new bool[num_vertices]();
 	
@@ -137,49 +129,3 @@ unsigned greedy_vertex_cover() {
 	//return cover_size;
 	return cover_size;
 }
-#endif
-
-// TODO: consider if this works with self pointing edges
-#if 0
-unsigned greedy_vertex_cover() {
-	bool* visited = new bool[num_vertices]();
-	std::vector<unsigned> to_visit;
-	for(unsigned i = 0; i < num_vertices; i++)
-		to_visit.push_back(i);
-
-	std::random_device rd;
-	std::mt19937 g(rd());
-	std::shuffle(to_visit.begin(), to_visit.end(), g);
-	
-	for(unsigned i = 0; i < num_vertices; i++) {
-		unsigned u = to_visit[i];
-		std::vector<unsigned> v_list;
-		for(unsigned i = 0; i < num_vertices; i++)
-			v_list.push_back(i);
-
-		std::shuffle(v_list.begin(), v_list.end(), g);	
-
-		if(visited[u])
-			continue;
-		for(unsigned j = 0; j < num_vertices; j++) {
-			unsigned v = v_list[j];
-			if(adjacency[u * num_vertices + v] == 0)
-				continue;
-			if(visited[v])
-				continue;
-			visited[v] = true;
-			visited[u] = true;
-		}
-	}
-
-	unsigned cover_size = 0;
-	for(unsigned i = 0; i < num_vertices; i++) {
-		if(visited[i])
-			cover_size++;
-	}
-
-	delete[] visited;
-	//return cover_size;
-	return cover_size;
-}
-#endif

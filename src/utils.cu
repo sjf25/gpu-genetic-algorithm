@@ -8,7 +8,8 @@ __device__ static double add(double x, double y) { return x + y; }
 __device__ static double max_wrapper(double x, double y) { return fmax(x, y); }
 
 template <typename F>
-__device__ static void parallel_reduce(double* arr, double* result, unsigned n, F func) {
+__device__ static void parallel_reduce(double* __restrict__ arr,
+	double* __restrict__ result, unsigned n, F func) {
 
 	unsigned idx = threadIdx.x;
 	__shared__ double* prefix_arr;
@@ -31,11 +32,11 @@ __device__ static void parallel_reduce(double* arr, double* result, unsigned n, 
 }
 
 // works for single block with multiple threads
-__device__ void prefix_sum(double* arr, double* result, unsigned n) {
+__device__ void prefix_sum(double* __restrict__ arr, double* __restrict__ result, unsigned n) {
 	parallel_reduce(arr, result, n, add);
 }
 
 // works for single block with multiple threads
-__device__ void parallel_max(double* arr, double* result, unsigned n) {
+__device__ void parallel_max(double* __restrict__ arr, double* __restrict__ result, unsigned n) {
 	parallel_reduce(arr, result, n, max_wrapper);
 }

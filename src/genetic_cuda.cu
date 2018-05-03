@@ -4,6 +4,7 @@
 #include <thrust/random.h>
 #include <thrust/functional.h>
 #include <thrust/reduce.h>
+#include <thrust/device_ptr.h>
 
 __constant__ static size_t pop_size;
 __constant__ static size_t member_size;
@@ -11,6 +12,8 @@ __constant__ static double crossover_rate;
 __constant__ static double mutation_rate;
 __constant__ static unsigned max_iterations;
 __constant__ double (*fitness)(uint8_t*);
+
+//__device__ double final_fitness;
 
 inline void check_cuda_error(std::string msg) {
         cudaError err = cudaGetLastError();
@@ -45,25 +48,14 @@ __device__ void init_population(int idx, uint8_t* population,
 		rand_gen.discard(idx);
 		population[member_size * idx + i] = dist(rand_gen);
 	}
-	#if 0
-	if(idx == 0) {
-		for(unsigned i = 0; i < member_size; i++)
-			population[member_size * idx + i] = 1;
-	}
-	#endif
 }
 
-__device__ void record_fitness(int idx, double* fitness_arr,
-	uint8_t* population, double* best_fitnesses) {
+__device__ void record_fitness(int idx, double* __restrict__ fitness_arr,
+	uint8_t* __restrict__ population, double* __restrict__ best_fitnesses) {
 	double current_fitness = fitness(get_member(population, idx));
 	fitness_arr[idx] = current_fitness;
 	if(current_fitness > best_fitnesses[idx])
 		best_fitnesses[idx] = current_fitness;
-	//TODO: remove the following later
-	#if 0
-	if(1/current_fitness <= 100)
-		printf("fitness: %f\n", 1/current_fitness);
-	#endif
 }
 
 __device__ static unsigned roulette(double* fitness_arr, double fitness_sum,
@@ -84,66 +76,26 @@ __device__ static unsigned roulette(double* fitness_arr, double fitness_sum,
 	return 0.0;
 }
 
-__device__ void selection(int idx, uint8_t* population, double* fitness_arr, uint8_t* new_population,
-	thrust::default_random_engine& rand_gen, double* best_fitnesses) {
+__device__ void selection(int idx, uint8_t* __restrict__ population,
+	double* __restrict__ fitness_arr, uint8_t* __restrict__ new_population,
+	thrust::default_random_engine& rand_gen, double* __restrict__ best_fitnesses,
+	bool* __restrict__ ready) {
 	__shared__ double fitness_sum;
-	//__shared__ uint8_t* new_population;
 	record_fitness(idx, fitness_arr, population, best_fitnesses);
-
-	#if 0
-	if(idx == 0) {
-		printf("fitness arr: ");
-		for(unsigned i = 0; i < pop_size; i++) {
-			printf("%f, ", fitness_arr[i]);
-		}
-		printf("\n");
-	}
-	#endif
 
 	__syncthreads();
 	prefix_sum(fitness_arr, &fitness_sum, pop_size);
 
-	#if 0
-	if(idx == 0) {
-		__syncthreads();
-		if(idx == 0)
-			printf("fitness sum is %f\n", fitness_sum);
-		//new_population = new uint8_t[pop_size];
-	}
-	#endif
-
 	__syncthreads();
-	// TODO: parallelize probability calculation
-	// TODO: parallelize roulette selection
-	if(idx == 0) {
-		// prob calc
-		double* probs = new double[pop_size]();
-		#if 1
-		double partial_prob_sum = 0.0;
-		for(unsigned i = 0; i < pop_size; i++) {
-			probs[i] = partial_prob_sum + fitness_arr[i] / fitness_sum;
-			partial_prob_sum += probs[i];
-		}
 
-		// roulette
-		for(unsigned i = 0; i < pop_size; i++) {
-			unsigned selected_idx = roulette(fitness_arr, fitness_sum, rand_gen);
-			memcpy(get_member(new_population, i),
-				get_member(population, selected_idx), member_size);
-		}
-		#endif
-
-		// free stuff
-		#if 0
-		delete[] fitness_arr;
-		#endif
-		delete[] probs;
-		//return new_population;
-	}
+	unsigned selected_idx = roulette(fitness_arr, fitness_sum, rand_gen);
+	memcpy(get_member(new_population, idx), get_member(population, selected_idx),
+		member_size);
+	ready[idx] = true;
 }
 
-__device__ static void two_point_crossover(int idx, uint8_t* parent1, uint8_t* parent2,
-	thrust::default_random_engine& rand_gen) {
+__device__ static void two_point_crossover(int idx, uint8_t* __restrict__ parent1,
+	uint8_t* __restrict__ parent2, thrust::default_random_engine& rand_gen) {
 	// crossover only with probability of crossover rate
 	thrust::uniform_real_distribution<double> crossover_dist(0.0, 1.0);
 	rand_gen.discard(idx);
@@ -167,23 +119,23 @@ __device__ static void two_point_crossover(int idx, uint8_t* parent1, uint8_t* p
 	delete[] temp_buffer;
 }
 
-__device__ static void crossover(int idx, uint8_t* selected,
-	thrust::default_random_engine& rand_gen) {
+__device__ static void crossover(int idx, uint8_t* __restrict__ selected,
+	thrust::default_random_engine& rand_gen, bool* __restrict__ ready) {
 	if(idx % 2 == 0) {
+		while(!ready[idx + 1]) {}
 		two_point_crossover(idx, get_member(selected, idx),
 			get_member(selected, idx+1), rand_gen);
+		ready[idx] = true;
+		ready[idx+1] = true;
 	}
-	#if 0
-	else {
-		printf("thread number %d doing nothing in crossover\n", idx);
-	}
-	#endif
+	//ready[idx] = true;
 }
 
 // TODO: consider speeding up mutation by not waiting to sync threads after crossover
 // TODO: consider speeding up by having thread per bit and mutating
-__device__ static void mutation(int idx, uint8_t* crossed_over,
-	thrust::default_random_engine& rand_gen) {
+__device__ static void mutation(int idx, uint8_t* __restrict__ crossed_over,
+	thrust::default_random_engine& rand_gen, bool* __restrict__ ready) {
+	while(!ready[idx]) {}
 	thrust::uniform_real_distribution<double> mutation_dist(0.0, 1.0);
 	uint8_t* member = get_member(crossed_over, idx);
 	for(unsigned i = 0; i < member_size; i++) {
@@ -195,6 +147,7 @@ __device__ static void mutation(int idx, uint8_t* crossed_over,
 		// flip the 'bit' when mutating
 		member[i] ^= 1;
 	}
+	ready[idx] = false;
 }
 
 __device__ void swap_population(uint8_t** population_1, uint8_t** population_2) {
@@ -205,53 +158,40 @@ __device__ void swap_population(uint8_t** population_1, uint8_t** population_2) 
 
 // I think it's safe to assume that pop_size <= 1024
 // so just one block with many threads
-// TODO: initalize population
-__global__ void genetic_kernel() {
+__global__ void genetic_kernel(double* final_fitnesses) {
 	int idx = threadIdx.x;
-	//printf("idx is %d\n", idx);
 	__shared__ uint8_t* population;
 	__shared__ uint8_t* new_population;
 	__shared__ double* fitness_arr;
 	__shared__ double* best_fitnesses;
 	__shared__ double best_fit;
+	
+	__shared__ bool* ready;
+
 	thrust::default_random_engine rand_gen;
+	rand_gen.discard(blockIdx.x);
 	
 
-	//__shared__ curandState_t* rand_state;
 	if(idx == 0) {
 		population = new uint8_t[pop_size * member_size];
 		new_population = new uint8_t[pop_size * member_size];
 		fitness_arr = new double[pop_size];
 		best_fitnesses = new double[pop_size];
+		ready = new bool[pop_size]();
 	}
 	__syncthreads();
 	best_fitnesses[idx] = -DBL_MAX;
 	init_population(idx, population, rand_gen);
 	
-	#if 0
-	if(idx == 0)
-		print_pop(population);
-	__syncthreads();
-	#endif
-
 	for(unsigned i = 0; i < max_iterations; i++) {
-		// selection
 		__syncthreads();
-		selection(idx, population, fitness_arr, new_population, rand_gen, best_fitnesses);
+		selection(idx, population, fitness_arr, new_population, rand_gen, best_fitnesses, ready);
 
-		#if 0
-		if(idx == 0) {
-			__syncthreads();
-			printf("----------------------------------------------\n");
-			print_pop(new_population);
-		}
-		#endif
+		//__syncthreads();
+		crossover(idx, new_population, rand_gen, ready);
 
-		__syncthreads();
-		crossover(idx, new_population, rand_gen);
-
-		__syncthreads();
-		mutation(idx, new_population, rand_gen);
+		//__syncthreads();
+		mutation(idx, new_population, rand_gen, ready);
 		
 		__syncthreads();
 		if(idx == 0)
@@ -260,14 +200,23 @@ __global__ void genetic_kernel() {
 	__syncthreads();
 	parallel_max(best_fitnesses, &best_fit, pop_size);
 	__syncthreads();
+	#if 0
 	if(idx == 0) {
 		printf("best fitness: %f\n", 1/best_fit);
 	}
+	#endif
+	//final_fitness = best_fit;
+	if(idx == 0) {
+		final_fitnesses[blockIdx.x] = best_fit;
+	}
 }
 
-void run_genetic_cuda(size_t p_size, size_t m_size, double cr_rate,
+double run_genetic_cuda(unsigned run_count, size_t p_size, size_t m_size, double cr_rate,
 		double m_rate, unsigned max_iter, double (*fitness_func)(uint8_t*)) {
-		//double m_rate, unsigned max_iter) {
+
+	// population size must be even
+	assert(p_size % 2 == 0);
+
 	cudaMemcpyToSymbol(pop_size, &p_size, sizeof(size_t));
 	cudaMemcpyToSymbol(member_size, &m_size, sizeof(size_t));
 	cudaMemcpyToSymbol(crossover_rate, &cr_rate, sizeof(double));
@@ -277,9 +226,14 @@ void run_genetic_cuda(size_t p_size, size_t m_size, double cr_rate,
 	cudaDeviceSynchronize();
 	check_cuda_error("memcpying arguments");
 
-	// TODO: change numbers in angle brackets later
-	genetic_kernel<<<1, p_size>>>();
+	double* final_fitnesses;
+	cudaMalloc(&final_fitnesses, run_count * sizeof(double));
+	genetic_kernel<<<run_count, p_size>>>(final_fitnesses);
 	cudaDeviceSynchronize();
 	check_cuda_error("after running kernel");
-	std::cout << "done with cuda genetic\n";
+
+	double return_val;
+	thrust::device_ptr<double> fit_ptr = thrust::device_pointer_cast(final_fitnesses);
+	return_val = *thrust::max_element(fit_ptr, fit_ptr + run_count);
+	return return_val;
 }

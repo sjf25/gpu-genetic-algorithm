@@ -1,8 +1,8 @@
 #TODO: get the makefile to recompile when header changes
 
 CXX = nvcc
-CXXFLAGS = -std=c++11 --compiler-options -W --compiler-options -Wall -g -arch=sm_61 -dc
-#CXXFLAGS = -std=c++11 --compiler-options -W --compiler-options -Wall -O3 -arch=sm_61 -dc
+#CXXFLAGS = -std=c++11 --compiler-options -W --compiler-options -Wall -g -arch=sm_61 -dc
+CXXFLAGS = -std=c++11 --compiler-options -W --compiler-options -Wall -O3 -Xptxas -O3 -arch=sm_61 -dc
 LFLAGS = -lboost_program_options -arch=sm_61 -std=c++11
 TARGET = bin/project
 CPP_SRC_FILES = $(wildcard src/*.cpp)
@@ -20,7 +20,8 @@ clean:
 
 run: $(TARGET)
 #	$(TARGET) --input=$(INPUT) ; notify-send "Done Running" -t 3000
-	$(TARGET) --input=$(INPUT) --pop-size=$(POP_SIZE) --func-evals=$(FUNC_EVALS) --run-mode=$(RUN_MODE)
+	$(TARGET) --input=$(INPUT) --pop-size=$(POP_SIZE) --func-evals=$(FUNC_EVALS) --run-mode=$(RUN_MODE) \
+		--problem=$(PROBLEM) --num-runs=$(NUM_RUNS) --maxone-len=$(MAXONE_LEN)
 
 profile: $(TARGET)
 #	nvprof --print-gpu-trace $(TARGET) --input=$(INPUT) --pop-size=$(POP_SIZE) --func-evals=$(FUNC_EVALS)

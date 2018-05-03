@@ -7,7 +7,6 @@
 
 typedef double (*fitness_t)(uint8_t*);
 
-void run_genetic_cuda(size_t, size_t, double, double, unsigned, fitness_t);
-//void run_genetic_cuda(size_t, size_t, double, double, unsigned);
+double run_genetic_cuda(unsigned, size_t, size_t, double, double, unsigned, fitness_t);
 
 #endif

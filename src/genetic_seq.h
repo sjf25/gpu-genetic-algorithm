@@ -6,6 +6,6 @@
 
 typedef double (*fitness_t)(uint8_t*);
 
-void run_genetic_seq(size_t, size_t, double, double, unsigned, fitness_t);
+double run_genetic_seq(unsigned, size_t, size_t, double, double, unsigned, fitness_t);
 
 #endif

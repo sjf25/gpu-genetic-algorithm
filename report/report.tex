@@ -15,8 +15,22 @@
 \begin{document}
 \maketitle
 
+Note: code can be found at \url{https://github.com/sjf25/gpu-genetic-algorithm}
+
 \section{Project Goals}
 The goal of this project was to use CUDA to speed up genetic algorithms. In particular, the hope was to use CUDA to improve the selection, crossover, and mutation steps. I measured speedup with two different problems: Vertex Cover and MaxOne.
+
+\section{How To Run}
+Note: must be run on CUDA capable machine. First run ``make all". Then run the executable in the ``bin" folder with the following flags:
+	\begin{itemize}
+		\item -{}-input - name of input file (only for vertex cover problem)
+		\item -{}-pop-size - size of the population (required)
+		\item -{}-func-evals - number of function evaluations (func-evals/pop-size = number of iterations) (required)
+		\item -{}-run-mode - mode to run in (either ``cuda" or ``seq") (required)
+		\item -{}-problem - which problem to run (either ``vercov" or ``maxone") (required)
+		\item -{}-num-runs - number of runs of the genetic algorithm (required)
+		\item -{}-maxone-len - length of the bitarray (only for the maxone problem)
+	\end{itemize}
 
 \section{Background}
 	\subsection{Genetic Algorithms}
@@ -37,7 +51,6 @@ a genetic algorithm are as follows:
 	\subsection{Vertex Cover} The goal is to find the smallest set of vertices such that every edge in the graph has at least one end in the set.
 	\subsection{Graph Density} Graph density,$D$, is defined as $D=\frac{2|E|}{|V|(|V|-1)}$. This is used to generate random graphs to test vertex cover.
 	\subsection{MaxOne} The goal is to maximize the 1s in the member's bitarray. The optimal solution is just to have every element of the bitarray be 1. However, the genetic algorithm doesn't ``know" this, so it is a good problem to see if the algorithm is working and has an inexpensive fitness function.
-
 
 \section{Design Choices}
 The idea to use the vertex cover problem came from a paper by Khuri and B{\"a}ck titled ``An evolutionary heuristic for the minimum vertex cover problem" (which can be found at \url{https://www.researchgate.net/profile/Sami_Khuri/publication/2581134_An_Evolutionary_Heuristic_for_the_Minimum_Vertex_Cover_Problem/links/0912f5087009852297000000.pdf}).\\
@@ -70,7 +83,7 @@ It seems like when the number of runs of the genetic algorithm was limited to 1,
   \caption{Speedup for MaxOne, varying population size}
 \end{figure}
 
-The CUDA version seemed to do much better than the sequential version when the algorithm was run multiple times. This is because in the CUDA code, it was as simple as increasing the number of blocks while in the seequntial version algorithm had to be repeated sequentially.
+The CUDA version seemed to do much better than the sequential version when the algorithm was run multiple times. This is because in the CUDA code, it was as simple as increasing the number of blocks while in the seequntial version algorithm had to be repeated sequentially.\\
 
 \begin{figure}[t]
   \centering

@@ -36,3 +36,5 @@ obj/
 
 # ignore swap files
 *.swp
+
+report/* linguist-vendored
